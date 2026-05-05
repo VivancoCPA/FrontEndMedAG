@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="MedicalCareR1.Shared/MedicalCareR1.Shared.csproj" />
+  <Project Path="MedicalCareR1/MedicalCareR1.Client/MedicalCareR1.Client.csproj" />
+  <Project Path="MedicalCareR1/MedicalCareR1/MedicalCareR1.csproj" />
+</Solution>
