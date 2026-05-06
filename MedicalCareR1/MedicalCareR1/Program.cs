@@ -1,10 +1,16 @@
+using MedicalCareR1.Auth;
 using MedicalCareR1.Client.Pages;
 using MedicalCareR1.Client.Services;
 using MedicalCareR1.Components;
 using MedicalCareR1.Shared.Contracts;
+using Microsoft.AspNetCore.Components.Authorization;
 using MudBlazor.Services;
+using System.Buffers.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// ✅ Primero los servicios de infraestructura base
+builder.Services.AddHttpContextAccessor(); // ← debe estar aquí arriba
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
@@ -12,11 +18,24 @@ builder.Services.AddRazorComponents()
     .AddInteractiveWebAssemblyComponents();
 
 // HttpClient tipado hacia el backend API
-builder.Services.AddHttpClient("AppApi", client => {
-    client.BaseAddress = new Uri(builder.Configuration["ApiSettings:BaseUrl"]!);
+var apiBaseUrl = builder.Configuration["ApiSettings:BaseUrl"];
+if (string.IsNullOrWhiteSpace(apiBaseUrl))
+    throw new InvalidOperationException(
+        "ApiSettings:BaseUrl no encontrada en appsettings.json del Sever");
+//Console.WriteLine($"=== Web BaseUrl: '{apiBaseUrl}'");
+//builder.Services.AddHttpClient("AppApi", client => {
+//    client.BaseAddress = new Uri(builder.Configuration["ApiSettings:BaseUrl"]!);
+//});
+builder.Services.AddHttpClient<IMedicalCenter, MedicalCenterServicio>(client =>
+{
+    client.BaseAddress = new Uri(apiBaseUrl!);
 });
 
-builder.Services.AddScoped<IMedicalCenter, MedicalCenterServicio>();
+builder.Services.AddAuthorizationCore();// Agrega servicios de autorización para Blazor WebAssembly
+builder.Services.AddCascadingAuthenticationState();// Agrega el estado de autenticación en cascada para que los componentes puedan acceder a la información de autenticación
+builder.Services.AddScoped<AuthenticationStateProvider, ServerAuthStateProvider>();
+
+//builder.Services.AddScoped<IMedicalCenter, MedicalCenterServicio>();
 
 builder.Services.AddMudServices();
 

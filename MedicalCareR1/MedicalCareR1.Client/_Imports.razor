@@ -11,6 +11,11 @@
 @using MedicalCareR1.Client
 @using MedicalCareR1.Client.Layout
 @using MedicalCareR1.Client.Utilities;
+@using MedicalCareR1.Shared.DTOs.CentrosMedicos
+@using MedicalCareR1.Shared.DTOs.Shared
 @using MudBlazor
+
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
 
 @inject IMedicalCenter MedicalCenterServicio

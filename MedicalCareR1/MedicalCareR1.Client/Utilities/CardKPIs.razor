@@ -1,0 +1,20 @@
+﻿<MudCard Class="pa-2 text-center" Style=@($"border-left:5px solid {_color};")>
+    <div class="d-flex align-center">
+        <!-- Icono a la izquierda -->
+        <MudIcon Icon="@_icon"
+                 Style=@($"color:{_color}; font-size: 3rem;")
+                 Class="mr-3" />
+        <!-- Contenedor de textos a la derecha -->
+        <div class="d-flex flex-column justify-center">
+            <MudText Typo="Typo.h6" Class="font-weight-bold">@_title</MudText>
+            <MudText Typo="Typo.h4" Style=@($"color:{_color};")>@_content</MudText>
+        </div>
+     </div>
+</MudCard>
+
+@code {
+   [Parameter, EditorRequired] public string _title { get; set; } = null!;
+   [Parameter, EditorRequired] public int _content { get; set; } = 0;
+   [Parameter] public string _color { get; set; } = "#14213d";
+   [Parameter] public string _icon { get; set; } = Icons.Material.Filled.Info;
+}

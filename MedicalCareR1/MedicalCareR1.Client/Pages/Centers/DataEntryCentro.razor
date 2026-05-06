@@ -1,0 +1,282 @@
+﻿@using System.ComponentModel.DataAnnotations
+@using System.Net.Http.Json
+@using MedicalCareR1.Shared.DTOs.CentrosMedicos
+
+@* @inject HttpClient Http *@
+@inject IHttpClientFactory HttpFactory
+@inject IJSRuntime JS
+
+<MudPaper Class="pa-4 mx-auto my-2" Outlined="true" Elevation="1" MaxWidth="100%">
+
+    <MudForm @ref="form" Model="@modelo" OnValidSubmit="HandleSubmit">
+
+        @* <MudText Typo="Typo.h6">Formulario</MudText> *@
+
+        <!-- Campo 1 Nombre -->
+        <MudTextField T="string"
+                      Label="Nombre"
+                      @bind-Value="modelo.name"
+                      Required="true"
+                      RequiredError="El nombre es obligatorio" />
+
+        <!-- Campo 2 Direccion-->
+        <MudTextField T="string"
+                      Label="Dirección"
+                      Required="true"
+                      @bind-Value="modelo.address" />
+        <MudGrid>
+            <!-- Campo 3 Select -->
+            <MudItem xs="6">
+                <MudSelect T="string"
+                           Label="Tipo"
+                           @bind-Value="modelo.type"
+                           Required="true"
+                           RequiredError="Seleccione un tipo">
+                    @foreach (var tipo in tipos)
+                    {
+                        <MudSelectItem Value="@tipo">@tipo</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="6">
+                <!-- Campo 4  Telefono-->
+                <MudTextField T="string"
+                              Label="Telefono"
+                              Mask="@(new PatternMask("000 000 000 000"))"
+                              @bind-Value="modelo.phone" />
+            </MudItem>
+        </MudGrid>
+        <MudDivider Class="my-4" />
+
+        <!-- SECCIÓN MAPA -->
+        <MudText Typo="Typo.subtitle1">Ubicación</MudText>
+
+        <!-- Dirección para geocoding -->
+        <MudTextField Label="Buscar dirección"
+                      @bind-Value="direccionBusqueda"
+                      Placeholder="Ej: Clinica Delgado, Lima" />
+
+        <MudButton Variant="Variant.Outlined"
+                   @onclick="BuscarCoordenadas"
+                   Class="m-2">
+            Buscar en mapa
+        </MudButton>
+
+        <!-- Coordenadas -->
+        <MudGrid>
+            <MudItem xs="6">
+                <MudTextField Label="Latitud"
+                              @bind-Value="modelo.latitude"
+                              ReadOnly="true" />
+            </MudItem>
+            <MudItem xs="6">
+                <MudTextField Label="Longitud"
+                              @bind-Value="modelo.longitude"
+                              ReadOnly="true" />
+            </MudItem>
+        </MudGrid>
+        <!-- Vista previa -->
+        @if (!string.IsNullOrWhiteSpace(MapUrl))
+        {
+            <MudText Class="mt-3">Vista previa:</MudText>
+
+            <iframe width="100%"
+                    height="300"
+                    style="border:0; border-radius:8px;"
+                    loading="lazy"
+                    src="@MapUrl">
+            </iframe>
+        }
+
+        <!-- Checkbox -->
+        <MudCheckBox @bind-Value="modelo.isActive"
+                     Label="Activo" />
+
+        <!-- Botón -->
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   Class="mt-4"
+                   @onclick="Submit">
+            Guardar
+        </MudButton>
+
+    </MudForm>
+
+</MudPaper>
+
+@code {
+    [CascadingParameter]//
+    private IMudDialogInstance? MudDialog { get; set; }
+    [Parameter, EditorRequired]
+    public MedicalCenterResponseDto modelo { get; set; }
+    private bool esEdicion => modelo != null && modelo.Id != Guid.Empty;
+    //private bool esEdicion => modelo != null ;
+    private string? direccionBusqueda;
+    private MudForm? form;
+    //private MedicalCenterRegistroDto modelo = new();
+    private List<string> tipos = new()
+    {
+        "Hospital",
+        "Clinica",       // Clínica (sin tilde para compatibilidad con EF/DB)
+        "Veterinaria",
+        "Laboratorio",
+        "PostaMedica"
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Este método se llama solo si el formulario es válido
+        // Puedes dejarlo vacío o usarlo para lógica adicional
+        Console.WriteLine($"OnInitializedAsync -  {modelo.address}");
+    }
+    private async Task Submit()
+    {
+        Console.WriteLine($"Edicion?: {esEdicion}");
+        await form.ValidateAsync();
+
+        if (form.IsValid)
+        {
+            if (!esEdicion)
+            {
+                await NewSubmit();
+            }
+            else
+            {
+                await EditSubmit();
+            }
+        }
+        else
+        {
+            Snackbar.Add("Por favor, complete todos los campos requeridos.", Severity.Warning);
+        }
+    }
+
+    private async Task NewSubmit()
+    {
+        // Aquí llamas a tu API
+        //Console.WriteLine($"Nombre: {modelo.Name}");
+        var request = new MedicalCenterRegistroDto
+        {
+            Name = modelo?.name!,
+            Type = modelo.type,
+            Address = modelo.address,
+            Phone = modelo.phone,
+            IsActive = modelo.isActive,
+            Latitude = (double)modelo.latitude,
+            Longitude = (double)modelo.longitude
+        };
+        //
+        try
+        {
+            var response = await MedicalCenterServicio.CreateCentro(request, CancellationToken.None);
+
+            Snackbar.Add($"Centro {modelo.name} Creado.", Severity.Success);
+
+            MudDialog.Close(DialogResult.Ok(true)); // ✅ cierra y notifica
+
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+    private async Task EditSubmit()
+    {
+        var request = new MedicalCenterResponseDto
+        {
+            Id = modelo.Id,
+            name = modelo.name!,
+            type = modelo.type,
+            address = modelo.address,
+            phone = modelo.phone,
+            isActive = modelo.isActive,
+            latitude = (double)modelo.latitude,
+            longitude = (double)modelo.longitude
+        };
+        //Console.WriteLine($"Request: {System.Text.Json.JsonSerializer.Serialize(request)}");
+        try
+        {
+            var response = await MedicalCenterServicio.UpdateCentro(modelo.Id, request, CancellationToken.None);
+
+            Snackbar.Add($"Centro {modelo.name} Actualizado.", Severity.Success);
+
+            MudDialog.Close(DialogResult.Ok(true)); // ✅ cierra y notifica
+
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+
+    }
+
+    public class NominatimResult
+    {
+        public double lat { get; set; }
+        public double lon { get; set; }
+    }
+
+    private string ConvertToEmbed(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+            return null;
+
+        // Caso 1: ya viene embed
+        if (url.Contains("/maps/embed"))
+            return url;
+
+        // Caso 2: maps?q=
+        if (url.Contains("maps?q="))
+            return url.Replace("maps?q=", "maps?q=").Replace("&output=embed", "") + "&output=embed";
+
+        // Caso 3: fallback simple
+        return url + "&output=embed";
+    }
+
+    private string MapUrl =>
+        ((modelo.latitude != 0) && (modelo.longitude != 0))
+        ? $"https://www.google.com/maps?q={modelo.latitude},{modelo.longitude}&output=embed"
+        : null;
+
+    // 🌍 Geocoding usando Nominatim (OpenStreetMap - gratis)
+    private async Task BuscarCoordenadas()
+    {
+        Console.WriteLine($"Buscando coordenadas para: {direccionBusqueda}");
+        if (string.IsNullOrWhiteSpace(direccionBusqueda))
+            return;
+        try
+        {
+            // Usa el cliente externo sin BaseAddress de tu API
+            var http = HttpFactory.CreateClient("Externo");
+            var url = $"https://nominatim.openstreetmap.org/search?q={Uri.EscapeDataString(direccionBusqueda)}&format=json&limit=1";
+
+            // Nominatim requiere User-Agent obligatorio
+            http.DefaultRequestHeaders.UserAgent.ParseAdd("MedicalCareApp/1.0"); //se debe llevar esta logica al BackEd
+            var result = await http.GetFromJsonAsync<List<NominatimResult>>(url);
+
+            if (result != null && result.Any())
+            {
+                modelo.latitude = result[0].lat;
+                modelo.longitude = result[0].lon;
+            }
+        }
+        catch (Exception ex)
+        {
+            // Manejo simple
+            Console.WriteLine($"=== Error BuscarCoordenadas: {ex.Message}");
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Si este WriteLine aparece en la terminal → corre en Server
+            Console.WriteLine("=== Render en SERVIDOR");
+
+            // Si aparece en consola del browser → corre en WASM
+            await JS.InvokeVoidAsync("console.log", "=== Render en BROWSER/WASM");
+        }
+    }
+
+}

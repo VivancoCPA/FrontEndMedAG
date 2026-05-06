@@ -1,8 +1,341 @@
 ﻿@page "/centrosMedicos"
 @attribute [StreamRendering]
 
-<h3>CentrosMedicos</h3>
+
+<!-- Cards -->
+<MudGrid Class="mb-6">
+    <!-- Total -->
+    <!-- xs total del cols sm cols x card -->
+    <MudItem xs="12" sm="6" md="3">
+        <CardKPIs _title="Total Centros" _content="@_total" _color="#1976d2" _icon="@Icons.Material.Filled.Info" />
+@*         <MudCard Class="pa-2 text-center" Style="border-left:5px solid #1976d2;">
+            <MudText Typo="Typo.h6" Class="font-weight-bold">Total Centros</MudText>
+            <MudText Typo="Typo.h4" Style="color:#1976d2;">@_total</MudText>
+        </MudCard> *@
+    </MudItem>
+    <!-- Activos -->
+    <MudItem xs="12" sm="6" md="3">
+        <CardKPIs _title="Activos" _content="@_activos" _color="#4caf50" _icon="@Icons.Material.Filled.Info" />
+        @* <MudCard Class="pa-2 text-center" Style="border-left:5px solid #4caf50;">
+            <MudText Typo="Typo.h6" Class="font-weight-bold">Activos</MudText>
+            <MudText Typo="Typo.h4" Style="color:#4caf50;">@_activos</MudText>
+        </MudCard> *@
+    </MudItem>
+    <!-- Inactivos -->
+    <MudItem xs="12" sm="6" md="3">
+        <CardKPIs _title="Inactivos" _content="@_inactivos" _color="#f44336" _icon="@Icons.Material.Filled.Info" />
+        @* <MudCard Class="pa-2 text-center" Style="border-left:5px solid #f44336;">
+            <MudText Typo="Typo.h6" Class="font-weight-bold">Inactivos</MudText>
+            <MudText Typo="Typo.h4" Style="color:#f44336;">@_inactivos</MudText>
+        </MudCard> *@
+    </MudItem>
+    <!-- MasVisitado -->
+    <MudItem xs="12" sm="6" md="3">
+        <CardKPIs _title="Clinica Javier Prado" _content="@_masVisitado" _color="#fb8500" _icon="@Icons.Material.Filled.Info" />
+        @* <MudCard Class="pa-2 text-center" Style="border-left:5px solid #fb8500;">
+            <MudText Typo="Typo.h6" Class="font-weight-bold">Mas Visitado</MudText>
+            <MudText Typo="Typo.h5" Class="mb-2" Style="color:#fb8500;">Clinica Ricardo Palma</MudText>
+        </MudCard> *@
+    </MudItem>
+</MudGrid>
+
+<!-- GrID Lista -->
+<MudContainer Fixed="true">
+    <MudDivider Class="my-4" /> <!-- 'my-4' añade margen arriba/abajo -->
+    <!-- Aquí listado -->
+    <MudDataGrid T="MedicalCenterResponseDto"
+                 @ref="grid"
+                 Dense="true"
+                 Hover="true"
+                 Elevation="2"
+                 RowsPerPage="5"
+                 Height="400px"
+                 ServerData="LoadServerData">
+        <LoadingContent>
+            <div class="d-flex flex-column align-center justify-center" style="height:200px;">
+                <MudProgressCircular Indeterminate="true" />
+                <MudText Class="mt-2">Cargando centros médicos...</MudText>
+            </div>
+        </LoadingContent>
+        <ToolBarContent>
+            @* Titulo *@
+            <MudText Typo="Typo.h6">Listado de Centros Médicos</MudText>
+            <MudSpacer />
+            @* Campo de Busqueda *@
+            <MudTextField T="string"
+                          Placeholder="Search"
+                          ValueChanged="OnSearchChanged"
+                          Adornment="Adornment.Start"
+                          Immediate="true"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          IconSize="Size.Medium"
+                          Class="mt-0"></MudTextField>
+            <MudSpacer />
+            @* Boton Nuevo *@
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Add"
+                       Style="font-size: 12px;"
+                       OnClick="NuevoCentro">
+                Nuevo Centro
+            </MudButton>
+        </ToolBarContent>
+
+        <Columns>
+            <PropertyColumn Property="x => x.name" HeaderStyle="@_HeaderStyle" Title="Nombre" />
+            <PropertyColumn Property="x => x.address" HeaderStyle="@_HeaderStyle" Title="Direccion" />
+            <PropertyColumn Property="x => x.type" HeaderStyle="@_HeaderStyle" Title="Tipo" />
+            <TemplateColumn Title="Estado" HeaderStyle="@_HeaderStyle" Context="estado">
+                <CellTemplate>
+                    <MudChip T="string"
+                             Color="@(estado.Item!.isActive ? Color.Success : Color.Error)"
+                             Size="Size.Small"
+                             Variant="Variant.Text">
+                        @(estado.Item.isActive ? "Activo" : "Inactivo")
+                    </MudChip>
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Ubicacion" HeaderStyle="@_HeaderStyle" Context="mapa">
+                <CellTemplate>
+                    @* función retorna Url' *@
+                    <MudLink href="@GetExternalMapUrl(mapa.Item?.latitude, mapa.Item?.longitude)"
+                             StartIcon="@Icons.Material.Filled.Map"
+                             Target="_blank">
+                        Ver Localizacion
+                    </MudLink>
+                </CellTemplate>
+            </TemplateColumn>
+            @* Acciones *@
+            <TemplateColumn Title="Acciones" HeaderStyle="@_HeaderStyle" Sortable="false" Filterable="false" Context="accion">
+                <CellTemplate>
+                    <div class="d-flex">
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                       Color="Color.Info"
+                                       Size="Size.Small"
+                                       OnClick="@(() => EditarCentro(accion.Item))" />
+
+                        <MudIconButton Icon="@(accion.Item!.isActive ? Icons.Material.Filled.Cancel : Icons.Material.Filled.Restore)"
+                                       Color="@(accion.Item!.isActive ? Color.Error : Color.Success)"
+                                       Size="Size.Small"
+                                       OnClick="@(() => ConfirmarEliminar(accion.Item))" />
+                    </div>
+                </CellTemplate>
+            </TemplateColumn>
+        </Columns>
+        <PagerContent>
+            <MudDataGridPager T="MedicalCenterResponseDto"
+                              ShowPageSizeSelector="true"
+                              PageSizeOptions="new int[] {5,10,20,50}" />
+        </PagerContent>
+    </MudDataGrid>
+</MudContainer>
 
 @code {
+    private int _total;
+    private int _activos;
+    private int _inactivos;
+    private int _masVisitado;
+    private string? _searchString;
+    private int? _lastPage;
+    private int? _lastPageSize;
+    private string? _lastSearch;
+    private string? _lastColSort;
+    private bool? _lastOrderSort;
+    private string _HeaderStyle = "background-color: var(--mud-palette-primary) !important; color: white !important; font-weight: bold; height: 40px;";
+
+    private MudDataGrid<MedicalCenterResponseDto>? grid;
+    private CancellationTokenSource? _cts;
+
+
+    private async void NuevoCentro()
+    {
+        MedicalCenterResponseDto centro = new();
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            CloseButton = true,
+            FullWidth = true,
+            Position = DialogPosition.CenterRight
+        };
+
+        var parameter = new DialogParameters
+        {
+            {"modelo" , centro}
+        };
+        Console.WriteLine($"Nuevo Centro - {centro.address}");
+        var dialog = await DialogService.ShowAsync<DataEntryCentro>("Registrar Nuevo Centro", parameter, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            // refresca tu lista de centros
+            await CargarDatos();
+
+        }
+        
+    }
+    //
+    private async void EditarCentro(MedicalCenterResponseDto centro)
+    {
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            CloseButton = true,
+            FullWidth = true,
+            Position = DialogPosition.CenterRight
+        };
+
+        var parameter = new DialogParameters
+        {
+            //clonamos para no modificar el original hasta que se guarde
+            { "Modelo", new MedicalCenterResponseDto
+                {
+                    Id = centro.Id,
+                    name = centro.name,
+                    address = centro.address,
+                    type = centro.type,
+                    phone = centro.phone,
+                    isActive = centro.isActive,
+                    latitude = centro.latitude,
+                    longitude = centro.longitude
+                }
+            }
+        };
+
+        var dialog = await DialogService.ShowAsync<DataEntryCentro>("Editar Centro", parameter, options);
+        // Aquí podrías navegar a una página de edición:
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await CargarDatos();
+        }
+        // NavigationManager.NavigateTo($"/medical-centers/edit/{centro.Id}");
+    }
+    //
+    private async Task ConfirmarEliminar(MedicalCenterResponseDto centro)
+    {
+
+        //Configurar el cuadro de diálogo
+        var options = new DialogOptions { CloseOnEscapeKey = true, Position = DialogPosition.TopCenter, CloseButton = true };
+        bool? result = await DialogService.ShowMessageBoxAsync(
+            @centro.isActive ? "Confirmar Desactivacion" : "Confirmar Activacion",
+            $"¿Estás seguro de que deseas {(centro.isActive ? "Desactivar" : "Activar")} el Centro: {centro.name}?",
+            yesText: @centro.isActive ? "Desactivar" : "Activar",
+            cancelText: "Cancelar",
+            options: options
+        );
+
+        if (result == true)
+        {
+            // Llamar a la API para eliminar el centro
+            await MedicalCenterServicio.ToggleStatusAsync(centro.Id, CancellationToken.None);
+            Snackbar.Add($"Centro {centro.name} actualizado.", Severity.Success);
+
+            // Cambias el dato...
+            centro.isActive = !centro.isActive;
+            StateHasChanged(); // Refresca la grilla
+
+        }
+        // Aquí deberías mostrar un diálogo de confirmación antes de llamar a la API
+    }
+    //
+    private async Task CargarDatos()
+    {
+        await InvokeAsync(async () =>
+        {
+            if (grid is not null)
+            {
+                _lastPage = null; //asegurar que se recarga para que pase la validacion inicial
+                grid.NavigateTo(0);              // sync
+                await grid.ReloadServerData();   // async
+                StateHasChanged();
+            }
+        });
+    }
+    //
+    private async Task<GridData<MedicalCenterResponseDto>>
+        LoadServerData(GridState<MedicalCenterResponseDto> state, CancellationToken ct)
+    {
+        //await Task.Delay(1000);//
+        Console.WriteLine("Misma consulta, evitando llamada API");
+
+        var sort = state.SortDefinitions.FirstOrDefault();
+
+        if (_lastPage == state.Page &&
+            _lastPageSize == state.PageSize &&
+            _lastSearch == _searchString &&
+            _lastColSort == sort?.SortBy &&
+            _lastOrderSort == sort?.Descending
+        )
+        {
+            return new GridData<MedicalCenterResponseDto>(); // evita duplicado
+        }
+        _lastPage = state.Page;
+        _lastPageSize = state.PageSize;
+        _lastSearch = _searchString;
+        _lastColSort = sort?.SortBy;
+        _lastOrderSort = sort?.Descending;
+        // ⚠️ Mud usa Page 0-based → tu API usa 1-based
+        var page = state.Page + 1;
+        var paramters = new ListedPagedDto
+            (
+             Page: page,
+             PageSize: state.PageSize,
+             Search: _searchString,
+             SortBy: sort?.SortBy,
+             SortDesc: sort?.Descending ?? false
+            );
+
+        var response = await MedicalCenterServicio.GetCentrosPaged(paramters, CancellationToken.None);
+
+        //Console.WriteLine(response);
+
+        if (response.Items is null)
+        {
+            return new GridData<MedicalCenterResponseDto>
+            {
+                Items = [],
+                TotalItems = 0
+            };
+        }
+        ;
+
+        return new GridData<MedicalCenterResponseDto>// mapea tu respuesta al formato que espera MudDataGrid
+        {
+            Items = response.Items,
+            TotalItems = response.TotalCount
+        };
+    }
+    //
+    private async Task OnSearchChanged(string value)
+    {
+        if (grid is null)
+            return; // 👈 evita crash
+
+        _cts?.Cancel(); // cancela llamada anterior
+        _cts = new CancellationTokenSource();
+
+        try
+        {
+            await Task.Delay(400, _cts.Token); // ⏱ espera (ajustable)
+            //Console.WriteLine($"Search changed: {value}");
+            _searchString = value;
+            grid.NavigateTo(0); // 👈 vuelve a página 1
+            await grid.ReloadServerData(); // 🔥 dispara el filtro en backend = LoadServerData
+        }
+        catch (TaskCanceledException)
+        {
+            // normal: usuario sigue escribiendo
+        }
+    }
+    //
+    private string GetExternalMapUrl(double? lat, double? lon)
+    {
+        if (lat == null || lon == null || lat == 0) return "#";
+        string l = lat.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        string n = lon.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        return $"https://www.google.com/maps/search/?api=1&query={l},{n}";
+    }
 
 }
