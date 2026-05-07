@@ -1,0 +1,62 @@
+﻿@using System.Dynamic
+@using MedicalCareR1.Client.Pages.Catalogos.Especialidad
+@using MedicalCareR1.Shared.DTOs.Catalogos
+@using MedicalCareR1.Shared.Enums
+
+@if (@TipoCatalogo == CodeTable.ESPECIALIDAD.ToString())
+{
+    <ListaEspecialidad />
+}
+
+@code {
+    [Parameter] public CatalogoConfig Config { get; set; } = default!;
+    [Parameter, EditorRequired] public string TipoCatalogo { get; set; } = default!;
+    private List<ExpandoObject> Items = new();
+
+    protected override void OnInitialized()
+    {
+        Console.WriteLine("CatalogoGrid initialized with endpoint: " + Config?.Endpoint);
+    }
+
+
+    RenderFragment RenderEditor(object item, CatalogoField field) => builder =>
+    {
+        if (item is not IDictionary<string, object> dict)
+            return;
+
+        // Asegurar que la propiedad exista
+        if (!dict.ContainsKey(field.Property))
+            dict[field.Property] = null;
+
+        var value = dict[field.Property];
+
+        if (field.Type == "switch")
+        {
+            bool boolValue = false;
+
+            if (value is bool b)
+                boolValue = b;
+            else if (value != null && bool.TryParse(value.ToString(), out var parsed))
+                boolValue = parsed;
+
+            builder.OpenComponent<MudSwitch<bool>>(0);
+            builder.AddAttribute(1, "Value", boolValue);
+            builder.AddAttribute(2, "ValueChanged", EventCallback.Factory.Create<bool>(this, v =>
+            {
+                dict[field.Property] = v;
+            }));
+            builder.CloseComponent();
+        }
+        else
+        {
+            builder.OpenComponent<MudTextField<string>>(0);
+            builder.AddAttribute(1, "Value", value?.ToString() ?? "");
+            builder.AddAttribute(2, "ValueChanged", EventCallback.Factory.Create<string>(this, v =>
+            {
+                dict[field.Property] = v;
+            }));
+            builder.CloseComponent();
+        }
+    };
+
+}

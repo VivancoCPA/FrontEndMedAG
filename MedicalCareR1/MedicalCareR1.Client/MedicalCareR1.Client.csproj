@@ -20,4 +20,9 @@
     <ProjectReference Include="..\..\MedicalCareR1.Shared\MedicalCareR1.Shared.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Pages\Catalogos\Insures\" />
+    <Folder Include="Pages\Catalogos\TipoCentro\" />
+  </ItemGroup>
+
 </Project>

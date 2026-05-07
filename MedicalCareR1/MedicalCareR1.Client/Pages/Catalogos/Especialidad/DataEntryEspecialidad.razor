@@ -1,0 +1,105 @@
+﻿@using MedicalCareR1.Shared.DTOs.Especialidades
+
+<MudPaper Class="pa-4 mx-auto my-2" Outlined="true" Elevation="1" MaxWidth="100%">
+
+    <MudForm @ref="form" Model="@modelo" OnValidSubmit="HandleSubmit">
+
+        <!-- Campo 1 Nombre -->
+        <MudTextField T="string"
+                      Label="Nombre"
+                      @bind-Value="modelo.name"
+                      Required="true"
+                      RequiredError="El nombre es obligatorio" />
+
+        <MudDivider Class="my-4" />
+
+        <!-- Checkbox -->
+        <MudCheckBox @bind-Value="modelo.isActive"
+                     Label="Activo" />
+
+        <!-- Botón -->
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   Class="mt-4"
+                   @onclick="Submit">
+            Guardar
+        </MudButton>
+
+    </MudForm>
+
+</MudPaper>
+@code {
+    [CascadingParameter]//
+    private IMudDialogInstance? MudDialog { get; set; }
+    [Parameter, EditorRequired]
+    public EspecialidadResponseDto modelo { get; set; }
+
+    private MudForm? form;
+    private bool esEdicion => modelo != null && modelo.Id != 0;
+
+    private async Task Submit()
+    {
+        Console.WriteLine($"Edicion?: {esEdicion}");
+        await form.ValidateAsync();
+
+        if (form.IsValid)
+        {
+            if (!esEdicion)
+            {
+                await NewSubmit();
+            }
+            else
+            {
+                await EditSubmit();
+            }
+        }
+        else
+        {
+            Snackbar.Add("Por favor, complete todos los campos requeridos.", Severity.Warning);
+        }
+    }
+    private async Task NewSubmit()
+    {
+        // Aquí llamas a tu API
+        //Console.WriteLine($"Nombre: {modelo.Name}");
+        var request = new EspecialidadRegistroDto
+        {
+            name = modelo?.name!,
+            isActive = modelo.isActive,
+        };
+        //
+        try
+        {
+            var response = await EspecialidadServicio.CreateEspecialidadAsync(request);
+
+            Snackbar.Add($"Especialidad {modelo.name} creada", Severity.Success);
+
+            MudDialog.Close(DialogResult.Ok(true)); // ✅ cierra y notifica
+
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+    private async Task EditSubmit()
+    {
+        var request = new EspecialidadRegistroDto
+        {
+            Id = modelo.Id,
+            name = modelo.name!,
+            isActive = modelo.isActive
+        };
+        //Console.WriteLine($"Request: {System.Text.Json.JsonSerializer.Serialize(request)}");
+        var response = await EspecialidadServicio.UpdateEspecialidadAsync(modelo.Id, request);
+        if (!response.Success)
+        {
+            Snackbar.Add(response.ErrorMessage!, Severity.Error);
+        }
+        else
+        {
+            Snackbar.Add($"Especialidad {modelo.name} actualizada.", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(true)); // ✅ cierra y notifica
+        }
+    }
+}

@@ -30,6 +30,14 @@ builder.Services.AddHttpClient<IMedicalCenter, MedicalCenterServicio>(client =>
 {
     client.BaseAddress = new Uri(apiBaseUrl!);
 });
+builder.Services.AddHttpClient<ICatalogoService, CatalogoApiService>(client =>
+{
+    client.BaseAddress = new Uri(apiBaseUrl!);
+});
+builder.Services.AddHttpClient<IEspecialidadService, EspecialidadService>(client =>
+{
+    client.BaseAddress = new Uri(apiBaseUrl!);
+});
 
 builder.Services.AddAuthorizationCore();// Agrega servicios de autorización para Blazor WebAssembly
 builder.Services.AddCascadingAuthenticationState();// Agrega el estado de autenticación en cascada para que los componentes puedan acceder a la información de autenticación

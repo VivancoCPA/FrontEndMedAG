@@ -1,0 +1,282 @@
+﻿@using MedicalCareR1.Shared.DTOs.Especialidades
+
+<MudContainer Fixed="true">  @* Ancho fijo *@
+    <MudDataGrid T="EspecialidadResponseDto"
+                 Dense="true"
+                 @ref="grid"
+                 Hover="true"
+                 Elevation="2"
+                 RowsPerPage="5"
+                 Height="400px"
+                 ServerData="LoadServerData">
+        @* Loading para espera *@
+        <LoadingContent>
+            <div class="d-flex flex-column align-center justify-center" style="height:200px;">
+                <MudProgressCircular Indeterminate="true" />
+                <MudText Class="mt-2">Cargando Especialidades...</MudText>
+            </div>
+        </LoadingContent>
+        @* Cabcera de la Lista *@
+        <ToolBarContent>
+            @* Titulo *@
+            <MudText Typo="Typo.h6">Listado de Especialidades</MudText>
+            <MudSpacer />
+            @* Campo de Busqueda *@
+            <MudTextField T="string"
+                          Placeholder="Busqueda"
+                          ValueChanged="OnSearchChanged"
+                          Adornment="Adornment.Start"
+                          Immediate="true"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          IconSize="Size.Medium"
+                          Class="mt-0"></MudTextField>
+            <MudSpacer />
+            @* Boton Nuevo *@
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Add"
+                       Style="font-size: 12px;"
+                       OnClick="NuevoCentro">
+                Nuevo
+            </MudButton>
+        </ToolBarContent>
+        @* Definicion de las columnas *@
+        <Columns>
+
+            <PropertyColumn Property="x => x.Id" HeaderStyle="@_HeaderStyle" Title="Id" CellStyle="width:120px" />
+            <PropertyColumn Property="x => x.name" HeaderStyle="@_HeaderStyle" Title="Descripción" />
+            <TemplateColumn Title="Acciones" HeaderStyle="@_HeaderStyle" Context="context" CellStyle="width:150px">
+                <CellTemplate >
+                    <div class="d-flex">
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                   Color="Color.Info"
+                                   Size="Size.Small"
+                                   OnClick="@(() => EditarCentro(context.Item))" />
+                        <MudSwitch T="bool"
+                               Value="context.Item.isActive"
+                               Color="Color.Success"
+                               UncheckedColor="Color.Error"
+                               ValueChanged="@(async v =>
+                                {
+                                    await Desactivar(context.Item);
+                                })" />
+                    </div>
+                </CellTemplate>
+            </TemplateColumn>
+        </Columns>
+        @* Paginador *@
+        <PagerContent>
+            <MudDataGridPager T="EspecialidadResponseDto"
+                              ShowPageSizeSelector="true"
+                              PageSizeOptions="new int[] {5,10,20,50}" />
+        </PagerContent>
+    </MudDataGrid>
+</MudContainer>
+@code {
+    private int _total;
+    private int _activos;
+    private int _inactivos;
+    private int _masVisitado;
+    private string? _searchString;
+    private int? _lastPage;
+    private int? _lastPageSize;
+    private string? _lastSearch;
+    private string? _lastColSort;
+    private bool? _lastOrderSort;
+    private string _HeaderStyle = "background-color: var(--mud-palette-primary) !important; color: white !important; font-weight: bold; height: 40px;";
+
+    private MudDataGrid<EspecialidadResponseDto>? grid;
+    private List<EspecialidadResponseDto> Especialidades = new();
+    private CancellationTokenSource? _cts;
+
+    private async void NuevoCentro()
+    {
+        EspecialidadResponseDto centro = new();
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            CloseButton = true,
+            FullWidth = true,
+            Position = DialogPosition.CenterRight
+        };
+
+        var parameter = new DialogParameters
+        {
+            {"modelo" , centro}
+        };
+        //Console.WriteLine($"Nueva Especialidad - {centro.name}");
+        var dialog = await DialogService.ShowAsync<DataEntryEspecialidad>("Registrar Nueva Especialidad", parameter, options);
+        var result = await dialog.Result;
+
+        if (!result!.Canceled)
+        {
+            // refresca tu lista de centros
+            await CargarDatos();
+
+        }
+
+    }
+    //
+    private async void EditarCentro(EspecialidadResponseDto centro)
+    {
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            CloseButton = true,
+            FullWidth = true,
+            Position = DialogPosition.CenterRight
+        };
+
+        var parameter = new DialogParameters
+        {
+            //clonamos para no modificar el original hasta que se guarde
+            { "Modelo", new EspecialidadResponseDto
+                {
+                    Id = centro.Id,
+                    name = centro.name,
+                    isActive = centro.isActive
+                }
+            }
+        };
+
+        var dialog = await DialogService.ShowAsync<DataEntryEspecialidad>("Editar Especialidad", parameter, options);
+        // Aquí podrías navegar a una página de edición:
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await CargarDatos();
+        }
+        // NavigationManager.NavigateTo($"/medical-centers/edit/{centro.Id}");
+    }
+    //
+    private async Task OnSearchChanged(string value)
+    {
+        // Lógica de búsqueda aquí
+        if (grid is null)
+            return; // 👈 evita crash
+
+        _cts?.Cancel(); // cancela llamada anterior
+        _cts = new CancellationTokenSource();
+
+        try
+        {
+            await Task.Delay(400, _cts.Token); // ⏱ espera (ajustable)
+            //Console.WriteLine($"Search changed: {value}");
+            _searchString = value;
+            grid.NavigateTo(0); // 👈 vuelve a página 1
+            await grid.ReloadServerData(); // 🔥 dispara el filtro en backend = LoadServerData
+        }
+        catch (TaskCanceledException)
+        {
+            // normal: usuario sigue escribiendo
+        }
+    }
+    private async Task Desactivar(EspecialidadResponseDto centro)
+    {
+        // nuevoValor es el valor que el usuario QUIERE poner
+        // el valor actual en el objeto es item.isActive (el original antes del click)
+        //var valorOriginalEnObjeto = centro.isActive;
+
+        //Configurar el cuadro de diálogo
+        var options = new DialogOptions { CloseOnEscapeKey = true, Position = DialogPosition.TopCenter, CloseButton = true };
+        bool? result = await DialogService.ShowMessageBoxAsync(
+            @centro.isActive ? "Confirmar Desactivacion" : "Confirmar Activacion",
+            $"¿Estás seguro de que deseas {(centro.isActive ? "Desactivar" : "Activar")} el Centro: {centro.name}?",
+            yesText: @centro.isActive ? "Desactivar" : "Activar",
+            cancelText: "Cancelar",
+            options: options
+        );
+
+        if (result == true)
+        {
+            // Llamar a la API para eliminar el centro
+            var response = await EspecialidadServicio.ToggleEspecialidadAsync(centro.Id);
+            if (!response.Success)
+            {
+                // restaurar el dato...
+                //centro.isActive = valorOriginalEnObjeto;
+                Snackbar.Add(response.ErrorMessage!, Severity.Error);
+                
+            }
+            else
+            {
+                // API exitosa — confirmar el nuevo valor
+                //centro.isActive = nuevoValor;
+                Snackbar.Add($"Especialidad {centro.name} actualizado.", Severity.Success);
+            }
+            // refresca tu lista de centros
+        }
+        await CargarDatos();
+        // Fuerza re-render para que el Switch refleje el valor correcto
+        //await InvokeAsync(StateHasChanged); // Refresca la grilla
+    }
+
+    private async Task<GridData<EspecialidadResponseDto>>
+        LoadServerData(GridState<EspecialidadResponseDto> state, CancellationToken ct)
+    {
+        //await Task.Delay(1000);//
+        //Console.WriteLine("Misma consulta, evitando llamada API");
+
+        var sort = state.SortDefinitions.FirstOrDefault();
+
+        if (_lastPage == state.Page &&
+            _lastPageSize == state.PageSize &&
+            _lastSearch == _searchString &&
+            _lastColSort == sort?.SortBy &&
+            _lastOrderSort == sort?.Descending
+        )
+        {
+            return new GridData<EspecialidadResponseDto>(); // evita duplicado
+        }
+        _lastPage = state.Page;
+        _lastPageSize = state.PageSize;
+        _lastSearch = _searchString;
+        _lastColSort = sort?.SortBy;
+        _lastOrderSort = sort?.Descending;
+        // ⚠️ Mud usa Page 0-based → tu API usa 1-based
+        var page = state.Page + 1;
+        var paramters = new ListedPagedDto
+            (
+             Page: page,
+             PageSize: state.PageSize,
+             Search: _searchString,
+             SortBy: sort?.SortBy,
+             SortDesc: sort?.Descending ?? false
+            );
+
+        var response = await EspecialidadServicio.GetEspecialidadPaged(paramters);
+
+        //Console.WriteLine(response);
+
+        if (response.Items is null)
+        {
+            return new GridData<EspecialidadResponseDto>
+            {
+                Items = [],
+                TotalItems = 0
+            };
+        }
+        ;
+
+        return new GridData<EspecialidadResponseDto>// mapea tu respuesta al formato que espera MudDataGrid
+        {
+            Items = response.Items,
+            TotalItems = response.TotalCount
+        };
+    }
+    //
+    private async Task CargarDatos()
+    {
+        await InvokeAsync(async () =>
+        {
+            if (grid is not null)
+            {
+                _lastPage = null; //asegurar que se recarga para que pase la validacion inicial
+                grid.NavigateTo(0);              // sync
+                await grid.ReloadServerData();   // async
+                StateHasChanged();
+            }
+        });
+    }
+}

@@ -58,7 +58,7 @@ public class MedicalCenterServicio(HttpClient _http) : IMedicalCenter
                 0);
     }
 
-    public async Task ToggleStatusAsync(Guid id, CancellationToken ct)
+    public async Task ToggleStatusAsync(Guid  id, CancellationToken ct)
     {
         var response = await _http.PatchAsync($"medical-centers/{id}/toggle-status", content: null);
         response.EnsureSuccessStatusCode();

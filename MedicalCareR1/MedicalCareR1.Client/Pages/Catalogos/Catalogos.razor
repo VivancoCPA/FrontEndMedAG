@@ -1,0 +1,98 @@
+﻿@page "/catalogos"
+@using MedicalCareR1.Shared.DTOs.Catalogos
+@using MedicalCareR1.Shared.Enums
+@* @rendermode InteractiveAuto *@
+@inject IJSRuntime JS
+
+<h3>Catalogos</h3>
+
+<MudGrid>
+    <MudItem xs="3">
+        <MudPaper Class="pa-2">
+            @foreach (var cat in ListaCatalogos)
+            {
+                var catLocal = cat;
+                <MudButton FullWidth="true"
+                           Variant="@(CatalogoSeleccionado?.Nombre == catLocal.Nombre
+                                                          ? Variant.Filled
+                                                          : Variant.Text)"
+                       Color="Color.Primary"
+                       Class="mb-1 justify-start"
+                       @onclick="@(() => Seleccionar(catLocal))">
+                @catLocal.Nombre
+            </MudButton>
+                        }
+        </MudPaper>
+    </MudItem>
+
+    <MudItem xs="9">
+        @if (CatalogoSeleccionado is not null)
+        {
+            <CatalogoGrid Config="CatalogoSeleccionado" 
+                          TipoCatalogo="@CatalogoSeleccionado.CodeTable" /> 
+        }
+    </MudItem>
+</MudGrid>
+
+@code {
+    private List<CatalogoConfig> ListaCatalogos = new();
+    private CatalogoConfig? CatalogoSeleccionado;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            Console.WriteLine("=== SERVIDOR - Catalogos");
+            await JS.InvokeVoidAsync("console.log", "=== BROWSER/WASM - Catalogos");
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        ListaCatalogos = new()
+        {
+            new CatalogoConfig
+            {
+                CodeTable  = nameof(CodeTable.ESPECIALIDAD),
+                Nombre = "Especialidades",
+                Endpoint = "api/especialidades",
+                // Fields = new()
+                // {
+                //     new() { Property = "nombre", Label = "Nombre" },
+                //     new() { Property = "activo", Label = "Activo", Type = "switch" }
+                // }
+            },
+            new CatalogoConfig
+            {
+                CodeTable  = nameof(CodeTable.ASEGURADORA),
+                Nombre = "Aseguradoras",
+                Endpoint = "api/aseguradoras",
+                // Fields = new()
+                // {
+                //     new() { Property = "nombre", Label = "Nombre" },
+                //     new() { Property = "activo", Label = "Activo", Type = "switch" }
+                // }
+            },
+            new CatalogoConfig
+            {
+                CodeTable  = nameof(CodeTable.TIPO_CENTRO),
+                Nombre = "Tipo Centro Medico",
+                Endpoint = "api/tipocentro",
+                // Fields = new()
+                // {
+                //     new() { Property = "nombre", Label = "Nombre" },
+                //     new() { Property = "ruc", Label = "RUC" },
+                //     new() { Property = "activo", Label = "Activo", Type = "switch" }
+                // }
+            }
+        };
+    }
+    private void Seleccionar(CatalogoConfig cat)
+    {
+        CatalogoSeleccionado = cat;
+        //Console.WriteLine($"Seleccionado: {cat.Endpoint}");
+        StateHasChanged();
+        
+    }
+
+}

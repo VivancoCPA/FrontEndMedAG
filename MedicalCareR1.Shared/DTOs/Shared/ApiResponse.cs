@@ -1,0 +1,11 @@
+﻿namespace MedicalCareR1.Shared.DTOs.Shared;
+
+public class ApiResponse<T>
+{
+    public bool Success { get; set; }
+
+    public T? Data { get; set; }
+
+    public string? ErrorMessage { get; set; }
+
+}

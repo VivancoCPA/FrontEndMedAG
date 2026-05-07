@@ -22,6 +22,15 @@ builder.Services.AddHttpClient<IMedicalCenter, MedicalCenterServicio>(client =>
 {
     client.BaseAddress = new Uri(apiBaseUrl);
 });
+builder.Services.AddHttpClient<ICatalogoService, CatalogoApiService>(client =>
+{
+    client.BaseAddress = new Uri(apiBaseUrl!);
+});
+builder.Services.AddHttpClient<IEspecialidadService, EspecialidadService>(client =>
+{
+    client.BaseAddress = new Uri(apiBaseUrl!);
+});
+
 // Cliente para APIs externas (sin BaseAddress fija)
 builder.Services.AddHttpClient("Externo");
 
@@ -30,5 +39,6 @@ builder.Services.AddCascadingAuthenticationState();// Agrega el estado de autent
 builder.Services.AddScoped<AuthenticationStateProvider, JwtAuthStateProvider>();
 
 builder.Services.AddMudServices();
+
 
 await builder.Build().RunAsync();
