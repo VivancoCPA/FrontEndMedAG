@@ -1,4 +1,4 @@
-﻿@using MedicalCareR1.Shared.DTOs.Especialidades
+﻿@using MedicalCareR1.Shared.DTOs.TipoCentroMedicos
 
 <MudPaper Class="pa-4 mx-auto my-2" Outlined="true" Elevation="1" MaxWidth="100%">
 
@@ -6,7 +6,7 @@
         <MudGrid class="pa-4">
             <!-- Campo 1 Nombre -->
             @* espacio de total es 12*@
-            <MudItem xs="12"> 
+            <MudItem xs="12">
                 <MudTextField T="string"
                               Label="Nombre"
                               @bind-Value="modelo.name"
@@ -14,25 +14,24 @@
                               RequiredError="El nombre es obligatorio" />
             </MudItem>
             <MudDivider Class="my-2" />
-                <!-- Switch -->
-             <MudItem xs="12" Class="d-flex align-center">
-                    <MudSwitch @bind-Value="modelo.isActive"
-                               Color="Color.Success"
-                               UncheckedColor="Color.Error"
-                               Label="Estado"
-                               LabelPlacement=Placement.Start
-                                />
-            </MudItem> 
+            <!-- Switch -->
+            <MudItem xs="12" Class="d-flex align-center">
+                <MudSwitch @bind-Value="modelo.isActive"
+                           Color="Color.Success"
+                           UncheckedColor="Color.Error"
+                           Label="Estado"
+                           LabelPlacement=Placement.Start />
+            </MudItem>
         </MudGrid>
 
         <!-- Botón -->
         <MudButton Variant="Variant.Filled"
-                    Color="Color.Primary"
-                    Class="mt-4"
-                    @onclick="Submit">
+                   Color="Color.Primary"
+                   Class="mt-4"
+                   @onclick="Submit">
             Guardar
         </MudButton>
-         
+
     </MudForm>
 
 </MudPaper>
@@ -40,14 +39,14 @@
     [CascadingParameter]//
     private IMudDialogInstance? MudDialog { get; set; }
     [Parameter, EditorRequired]
-    public EspecialidadResponseDto modelo { get; set; }
+    public TipoCentroResponseDto modelo { get; set; }
 
     private MudForm? form;
     private bool esEdicion => modelo != null && modelo.Id != 0;
 
     private async Task Submit()
     {
-        Console.WriteLine($"Edicion?: {esEdicion}");
+        //Console.WriteLine($"Edicion?: {esEdicion}");
         await form.ValidateAsync();
 
         if (form.IsValid)
@@ -70,43 +69,42 @@
     {
         // Aquí llamas a tu API
         //Console.WriteLine($"Nombre: {modelo.Name}");
-        var request = new EspecialidadRegistroDto
+        var request = new TipoCentroRegistroDto
         {
             name = modelo?.name!,
             isActive = modelo.isActive,
         };
         //
-        try
+        var response = await TipoCentroServicio.CreateTipoCentroAsync(request);
+        if (!response.Success)
         {
-            var response = await EspecialidadServicio.CreateEspecialidadAsync(request);
-
-            Snackbar.Add($"Especialidad {modelo.name} creada", Severity.Success);
-
-            MudDialog.Close(DialogResult.Ok(true)); // ✅ cierra y notifica
-
+            Snackbar.Add($"Error: {response.ErrorMessage!}", Severity.Error);
         }
-        catch (Exception ex)
+        else
         {
-            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            // API exitosa — confirmar el nuevo valor
+            //centro.isActive = nuevoValor;
+            Snackbar.Add($"Tipo de Centro {modelo.name} actualizado.", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(true)); // ✅ cierra y notifica
         }
     }
     private async Task EditSubmit()
     {
-        var request = new EspecialidadRegistroDto
+        var request = new TipoCentroRegistroDto
         {
             Id = modelo.Id,
             name = modelo.name!,
             isActive = modelo.isActive
         };
         //Console.WriteLine($"Request: {System.Text.Json.JsonSerializer.Serialize(request)}");
-        var response = await EspecialidadServicio.UpdateEspecialidadAsync(modelo.Id, request);
+        var response = await TipoCentroServicio.UpdateTipoCentroAsync(modelo.Id, request);
         if (!response.Success)
         {
-            Snackbar.Add(response.ErrorMessage!, Severity.Error);
+            Snackbar.Add($"Error: {response.ErrorMessage!}", Severity.Error);
         }
         else
         {
-            Snackbar.Add($"Especialidad {modelo.name} actualizada.", Severity.Success);
+            Snackbar.Add($"Tipo Centro {modelo.name} actualizado.", Severity.Success);
             MudDialog.Close(DialogResult.Ok(true)); // ✅ cierra y notifica
         }
     }

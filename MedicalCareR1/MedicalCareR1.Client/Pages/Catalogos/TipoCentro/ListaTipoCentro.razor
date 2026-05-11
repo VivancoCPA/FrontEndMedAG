@@ -1,7 +1,8 @@
-﻿@using MedicalCareR1.Shared.DTOs.Especialidades
-
-<MudContainer Fixed="true">  @* Ancho fijo *@
-    <MudDataGrid T="EspecialidadResponseDto"
+﻿@using MedicalCareR1.Shared.DTOs.TipoCentroMedicos
+@* // *@
+<MudContainer Fixed="true">
+    @* Ancho fijo *@
+    <MudDataGrid T="TipoCentroResponseDto"
                  Dense="true"
                  @ref="grid"
                  Hover="true"
@@ -13,13 +14,13 @@
         <LoadingContent>
             <div class="d-flex flex-column align-center justify-center" style="height:200px;">
                 <MudProgressCircular Indeterminate="true" />
-                <MudText Class="mt-2">Cargando Especialidades...</MudText>
+                <MudText Class="mt-2">Cargando Tipos de Centro...</MudText>
             </div>
         </LoadingContent>
         @* Cabcera de la Lista *@
         <ToolBarContent>
             @* Titulo *@
-            <MudText Typo="Typo.h6">Listado de Especialidades</MudText>
+            <MudText Typo="Typo.h6">Listado de Tipos de Centro</MudText>
             <MudSpacer />
             @* Campo de Busqueda *@
             <MudTextField T="string"
@@ -36,7 +37,7 @@
                        Color="Color.Primary"
                        StartIcon="@Icons.Material.Filled.Add"
                        Style="font-size: 12px;"
-                       OnClick="NuevoCentro">
+                       OnClick="NuevoTipo">
                 Nuevo
             </MudButton>
         </ToolBarContent>
@@ -46,20 +47,20 @@
             <PropertyColumn Property="x => x.Id" HeaderStyle="@_HeaderStyle" Title="Id" CellStyle="width:120px" />
             <PropertyColumn Property="x => x.name" HeaderStyle="@_HeaderStyle" Title="Descripción" />
             <TemplateColumn Title="Acciones" HeaderStyle="@_HeaderStyle" Context="context" CellStyle="width:150px">
-                <CellTemplate >
+                <CellTemplate>
                     <div class="d-flex">
                         <MudIconButton Icon="@Icons.Material.Filled.Edit"
-                                   Color="Color.Info"
-                                   Size="Size.Small"
-                                   OnClick="@(() => EditarCentro(context.Item))" />
+                                       Color="Color.Info"
+                                       Size="Size.Small"
+                                       OnClick="@(() => EditarTipo(context.Item))" />
                         <MudSwitch T="bool"
-                               Value="context.Item.isActive"
-                               Color="Color.Success"
-                               UncheckedColor="Color.Error"
-                               ValueChanged="@(async v =>
-                                {
-                                    await Desactivar(context.Item);
-                                })" >
+                                   Value="context.Item.isActive"
+                                   Color="Color.Success"
+                                   UncheckedColor="Color.Error"
+                                   ValueChanged="@(async v =>
+                                                    {
+                                                        await Desactivar(context.Item);
+                                                    })">
                             <MudText Typo="Typo.subtitle2" Class="ml-2">
                                 @(context.Item.isActive ? "Activo" : "Inactivo")
                             </MudText>
@@ -70,12 +71,14 @@
         </Columns>
         @* Paginador *@
         <PagerContent>
-            <MudDataGridPager T="EspecialidadResponseDto"
+            <MudDataGridPager T="TipoCentroResponseDto"
                               ShowPageSizeSelector="true"
                               PageSizeOptions="new int[] {5,10,20,50}" />
         </PagerContent>
     </MudDataGrid>
 </MudContainer>
+@* // *@
+
 @code {
     private int _total;
     private int _activos;
@@ -89,13 +92,14 @@
     private bool? _lastOrderSort;
     private string _HeaderStyle = "background-color: var(--mud-palette-primary) !important; color: white !important; font-weight: bold; height: 40px;";
 
-    private MudDataGrid<EspecialidadResponseDto>? grid;
-    private List<EspecialidadResponseDto> Especialidades = new();
+    private MudDataGrid<TipoCentroResponseDto>? grid;
+    private List<TipoCentroResponseDto> TipoCentros = new();
     private CancellationTokenSource? _cts;
 
-    private async void NuevoCentro()
+
+    private async void NuevoTipo()
     {
-        EspecialidadResponseDto centro = new();
+        TipoCentroResponseDto tipo = new();
         var options = new DialogOptions
         {
             CloseOnEscapeKey = true,
@@ -106,10 +110,10 @@
 
         var parameter = new DialogParameters
         {
-            {"modelo" , centro}
+            {"modelo" , tipo}
         };
         //Console.WriteLine($"Nueva Especialidad - {centro.name}");
-        var dialog = await DialogService.ShowAsync<DataEntryEspecialidad>("Registrar Nueva Especialidad", parameter, options);
+        var dialog = await DialogService.ShowAsync<DataEntryTipoCentro>("Registrar Tipo Centro", parameter, options);
         var result = await dialog.Result;
 
         if (!result!.Canceled)
@@ -121,7 +125,7 @@
 
     }
     //
-    private async void EditarCentro(EspecialidadResponseDto centro)
+    private async void EditarTipo(TipoCentroResponseDto tipo)
     {
         var options = new DialogOptions
         {
@@ -134,16 +138,16 @@
         var parameter = new DialogParameters
         {
             //clonamos para no modificar el original hasta que se guarde
-            { "Modelo", new EspecialidadResponseDto
+            { "Modelo", new TipoCentroResponseDto
                 {
-                    Id = centro.Id,
-                    name = centro.name,
-                    isActive = centro.isActive
+                    Id = tipo.Id,
+                    name = tipo.name,
+                    isActive = tipo.isActive
                 }
             }
         };
 
-        var dialog = await DialogService.ShowAsync<DataEntryEspecialidad>("Editar Especialidad", parameter, options);
+        var dialog = await DialogService.ShowAsync<DataEntryTipoCentro>("Editar Tipo Centro", parameter, options);
         // Aquí podrías navegar a una página de edición:
         var result = await dialog.Result;
 
@@ -154,6 +158,72 @@
         // NavigationManager.NavigateTo($"/medical-centers/edit/{centro.Id}");
     }
     //
+    private async Task<GridData<TipoCentroResponseDto>>
+        LoadServerData(GridState<TipoCentroResponseDto> state, CancellationToken ct)
+    {
+        //await Task.Delay(1000);//
+        //Console.WriteLine("Misma consulta, evitando llamada API");
+
+        var sort = state.SortDefinitions.FirstOrDefault();
+
+        if (_lastPage == state.Page &&
+            _lastPageSize == state.PageSize &&
+            _lastSearch == _searchString &&
+            _lastColSort == sort?.SortBy &&
+            _lastOrderSort == sort?.Descending
+        )
+        {
+            return new GridData<TipoCentroResponseDto>(); // evita duplicado
+        }
+        _lastPage = state.Page;
+        _lastPageSize = state.PageSize;
+        _lastSearch = _searchString;
+        _lastColSort = sort?.SortBy;
+        _lastOrderSort = sort?.Descending;
+        // ⚠️ Mud usa Page 0-based → tu API usa 1-based
+        var page = state.Page + 1;
+        var paramters = new ListedPagedDto
+            (
+             Page: page,
+             PageSize: state.PageSize,
+             Search: _searchString,
+             SortBy: sort?.SortBy,
+             SortDesc: sort?.Descending ?? false
+            );
+
+        var response = await TipoCentroServicio.GetTipoCentroPaged(paramters);
+        if (!response.Success)
+        {
+            Snackbar.Add(response.ErrorMessage!, Severity.Error);
+            return new GridData<TipoCentroResponseDto>
+            {
+                Items = [],
+                TotalItems = 0
+            };
+        }
+
+        return new GridData<TipoCentroResponseDto>// mapea tu respuesta al formato que espera MudDataGrid
+        {
+            Items = response.Items,
+            TotalItems = response.TotalCount
+        };
+        
+    }
+    //
+    private async Task CargarDatos()
+    {
+        await InvokeAsync(async () =>
+        {
+            if (grid is not null)
+            {
+                _lastPage = null; //asegurar que se recarga para que pase la validacion inicial
+                grid.NavigateTo(0);              // sync
+                await grid.ReloadServerData();   // async
+                StateHasChanged();
+            }
+        });
+    }
+
     private async Task OnSearchChanged(string value)
     {
         // Lógica de búsqueda aquí
@@ -176,7 +246,8 @@
             // normal: usuario sigue escribiendo
         }
     }
-    private async Task Desactivar(EspecialidadResponseDto centro)
+    //
+    private async Task Desactivar(TipoCentroResponseDto tipo)
     {
         // nuevoValor es el valor que el usuario QUIERE poner
         // el valor actual en el objeto es item.isActive (el original antes del click)
@@ -185,9 +256,9 @@
         //Configurar el cuadro de diálogo
         var options = new DialogOptions { CloseOnEscapeKey = true, Position = DialogPosition.TopCenter, CloseButton = true };
         bool? result = await DialogService.ShowMessageBoxAsync(
-            @centro.isActive ? "Confirmar Desactivacion" : "Confirmar Activacion",
-            $"¿Estás seguro de que deseas {(centro.isActive ? "Desactivar" : "Activar")} el Centro: {centro.name}?",
-            yesText: @centro.isActive ? "Desactivar" : "Activar",
+            @tipo.isActive ? "Confirmar Desactivacion" : "Confirmar Activacion",
+            $"¿Estás seguro de que deseas {(tipo.isActive ? "Desactivar" : "Activar")} el Tipo de Centro: {tipo.name}?",
+            yesText: @tipo.isActive ? "Desactivar" : "Activar",
             cancelText: "Cancelar",
             options: options
         );
@@ -195,19 +266,19 @@
         if (result == true)
         {
             // Llamar a la API para eliminar el centro
-            var response = await EspecialidadServicio.ToggleEspecialidadAsync(centro.Id);
+            var response = await TipoCentroServicio.ToggleTipoCentroAsync(tipo.Id);
             if (!response.Success)
             {
                 // restaurar el dato...
                 //centro.isActive = valorOriginalEnObjeto;
                 Snackbar.Add(response.ErrorMessage!, Severity.Error);
-                
+
             }
             else
             {
                 // API exitosa — confirmar el nuevo valor
                 //centro.isActive = nuevoValor;
-                Snackbar.Add($"Especialidad {centro.name} actualizado.", Severity.Success);
+                Snackbar.Add($"Tipo de Centro {tipo.name} actualizado.", Severity.Success);
             }
             // refresca tu lista de centros
         }
@@ -216,71 +287,4 @@
         //await InvokeAsync(StateHasChanged); // Refresca la grilla
     }
 
-    private async Task<GridData<EspecialidadResponseDto>>
-        LoadServerData(GridState<EspecialidadResponseDto> state, CancellationToken ct)
-    {
-        //await Task.Delay(1000);//
-        //Console.WriteLine("Misma consulta, evitando llamada API");
-
-        var sort = state.SortDefinitions.FirstOrDefault();
-
-        if (_lastPage == state.Page &&
-            _lastPageSize == state.PageSize &&
-            _lastSearch == _searchString &&
-            _lastColSort == sort?.SortBy &&
-            _lastOrderSort == sort?.Descending
-        )
-        {
-            return new GridData<EspecialidadResponseDto>(); // evita duplicado
-        }
-        _lastPage = state.Page;
-        _lastPageSize = state.PageSize;
-        _lastSearch = _searchString;
-        _lastColSort = sort?.SortBy;
-        _lastOrderSort = sort?.Descending;
-        // ⚠️ Mud usa Page 0-based → tu API usa 1-based
-        var page = state.Page + 1;
-        var paramters = new ListedPagedDto
-            (
-             Page: page,
-             PageSize: state.PageSize,
-             Search: _searchString,
-             SortBy: sort?.SortBy,
-             SortDesc: sort?.Descending ?? false
-            );
-
-        var response = await EspecialidadServicio.GetEspecialidadPaged(paramters);
-
-        //Console.WriteLine(response);
-
-        if (response.Items is null)
-        {
-            return new GridData<EspecialidadResponseDto>
-            {
-                Items = [],
-                TotalItems = 0
-            };
-        }
-        ;
-
-        return new GridData<EspecialidadResponseDto>// mapea tu respuesta al formato que espera MudDataGrid
-        {
-            Items = response.Items,
-            TotalItems = response.TotalCount
-        };
-    }
-    //
-    private async Task CargarDatos()
-    {
-        await InvokeAsync(async () =>
-        {
-            if (grid is not null)
-            {
-                _lastPage = null; //asegurar que se recarga para que pase la validacion inicial
-                grid.NavigateTo(0);              // sync
-                await grid.ReloadServerData();   // async
-                StateHasChanged();
-            }
-        });
-    }
 }

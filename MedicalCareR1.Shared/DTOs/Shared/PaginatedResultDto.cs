@@ -6,8 +6,10 @@ public record PaginatedResultDto<T>
     IEnumerable<T> Items,
     int Page,
     int PageSize,
-    int TotalCount)
-
+    int TotalCount,
+    bool Success = true,
+    string? ErrorMessage = null!
+    ) where T : class
     {
         public int TotalPages => (int)Math.Ceiling((double)TotalCount / PageSize);
         public bool HasPreviousPage => Page > 1;

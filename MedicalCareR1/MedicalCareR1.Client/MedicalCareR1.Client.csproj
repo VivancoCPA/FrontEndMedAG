@@ -22,7 +22,6 @@
 
   <ItemGroup>
     <Folder Include="Pages\Catalogos\Insures\" />
-    <Folder Include="Pages\Catalogos\TipoCentro\" />
   </ItemGroup>
 
 </Project>

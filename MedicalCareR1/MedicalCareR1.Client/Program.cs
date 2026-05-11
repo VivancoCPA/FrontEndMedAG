@@ -30,6 +30,10 @@ builder.Services.AddHttpClient<IEspecialidadService, EspecialidadService>(client
 {
     client.BaseAddress = new Uri(apiBaseUrl!);
 });
+builder.Services.AddHttpClient<ITipoCentroService, TipoCentrroServicio>(client =>
+{
+    client.BaseAddress = new Uri(apiBaseUrl!);
+});
 
 // Cliente para APIs externas (sin BaseAddress fija)
 builder.Services.AddHttpClient("Externo");

@@ -1,5 +1,6 @@
 ﻿@using System.Dynamic
 @using MedicalCareR1.Client.Pages.Catalogos.Especialidad
+@using MedicalCareR1.Client.Pages.Catalogos.TipoCentro
 @using MedicalCareR1.Shared.DTOs.Catalogos
 @using MedicalCareR1.Shared.Enums
 
@@ -7,11 +8,15 @@
 {
     <ListaEspecialidad />
 }
+@if (@TipoCatalogo == CodeTable.TIPO_CENTRO.ToString())
+{
+    <ListaTipoCentro />
+}
 
 @code {
     [Parameter] public CatalogoConfig Config { get; set; } = default!;
     [Parameter, EditorRequired] public string TipoCatalogo { get; set; } = default!;
-    private List<ExpandoObject> Items = new();
+    //private List<ExpandoObject> Items = new();
 
     protected override void OnInitialized()
     {
